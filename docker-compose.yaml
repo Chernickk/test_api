@@ -9,4 +9,23 @@ services:
       POSTGRES_USER: "test"
       POSTGRES_PASSWORD: "testpassword"
     volumes:
-      - ./db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
+
+  web:
+    build: ./
+    restart: on-failure
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:8080"
+    depends_on:
+      - web
+
+
+volumes:
+  db-data:

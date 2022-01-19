@@ -7,14 +7,8 @@ from typing import Dict
 import aiohttp
 import requests
 from bs4 import BeautifulSoup
-from sqlalchemy.ext.automap import automap_base
-from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
 
-from config import Config
-
-URL = 'https://mosmetro.ru'
-MAIN_PAGE = f'{URL}/news/'
+from parse.db import DBConnect
 
 
 class Parser:
@@ -41,11 +35,16 @@ class Parser:
         month_num = self.date_dict[month_word]
         date = date.replace(month_word, month_num)
         date = datetime.strptime(date, '%d %m, %H:%M')
-        date = date.replace(year=datetime.now().year)
+
+        # avoid mistakes at beginning of the year
+        if date.month == 12 and datetime.now().month == 1:
+            date = date.replace(year=datetime.now().year - 1)
+        else:
+            date = date.replace(year=datetime.now().year)
 
         return date
 
-    def get_news_data(self, page: str) -> Dict:
+    def find_news_data(self, page: str) -> Dict:
         soup = BeautifulSoup(page, 'html.parser')
 
         picture_url = soup.find('img', class_='article__image')['src']
@@ -75,8 +74,8 @@ class Parser:
         text = await page.text()
         return text
 
-    async def get_news_pages(self) -> tuple:
-        page = requests.get(MAIN_PAGE)
+    async def find_news_pages(self) -> tuple:
+        page = requests.get(f'{self.base_url}{self.path}')
         soup = BeautifulSoup(page.text, "html.parser")
 
         news = soup.findAll('a', {'class': 'news-card'})
@@ -89,42 +88,14 @@ class Parser:
         return pages
 
     def parse(self):
-        pages = asyncio.run(self.get_news_pages())
+        pages = asyncio.run(self.find_news_pages())
 
         news = []
 
         for page in pages:
-            news.append(self.get_news_data(page))
+            news.append(self.find_news_data(page))
 
         return news
-
-
-class DBConnect:
-    def __init__(self, db_url):
-        """prepare and automap db"""
-
-        self._Base = automap_base()
-        self._engine = create_engine(db_url)
-        self._Base.prepare(self._engine, reflect=True)
-
-        self.News = self._Base.classes.news
-
-    def __enter__(self):
-        self.session = Session(self._engine)
-
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.session.close()
-
-    def add_news(self, news: list[Dict]):
-        for one_news in news:
-            self.session.merge(self.News(title=one_news['title'],
-                                         picture_url=one_news['picture_url'],
-                                         posted_at=one_news['posted_at'],
-                                         parsed_at=one_news['parsed_at'],
-                                         text=one_news['text']))
-        self.session.commit()
 
 
 class Worker(Process):
@@ -139,9 +110,3 @@ class Worker(Process):
             with self.connection as conn:
                 conn.add_news(news)
             sleep(15 * 60)
-
-
-if __name__ == '__main__':
-    print(Config.SQLALCHEMY_DATABASE_URI)
-    w = Worker(Config.SQLALCHEMY_DATABASE_URI, URL, MAIN_PAGE)
-    w.start()
