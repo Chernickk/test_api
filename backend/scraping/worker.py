@@ -8,10 +8,10 @@ import aiohttp
 import requests
 from bs4 import BeautifulSoup
 
-from parse.db import DBConnect
+from scraping.db import DBConnect
 
 
-class Parser:
+class Scraper:
     def __init__(self, base_url: str, path: str):
         self.base_url = base_url
         self.path = path
@@ -87,7 +87,7 @@ class Parser:
 
         return pages
 
-    def parse(self):
+    def scrape(self) -> list:
         pages = asyncio.run(self.find_news_pages())
 
         news = []
@@ -99,14 +99,17 @@ class Parser:
 
 
 class Worker(Process):
-    def __init__(self, db_url, base_url, path):
+    def __init__(self, db_url: str, base_url: str, path: str):
         super().__init__()
         self.connection = DBConnect(db_url=db_url)
-        self.parser = Parser(base_url=base_url, path=path)
+        self.scraper = Scraper(base_url=base_url, path=path)
 
     def run(self) -> None:
         while True:
-            news = self.parser.parse()
-            with self.connection as conn:
-                conn.add_news(news)
-            sleep(15 * 60)
+            try:
+                news = self.scraper.scrape()
+                with self.connection as conn:
+                    conn.add_news(news)
+                sleep(10 * 60)
+            except Exception as e:
+                print(f'Scraping job failed: {e}')

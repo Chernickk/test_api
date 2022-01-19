@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 
 
 class DBConnect:
-    def __init__(self, db_url):
+    def __init__(self, db_url: str):
         """prepare and automap db"""
 
         self._Base = automap_base()

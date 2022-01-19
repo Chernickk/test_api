@@ -1,4 +1,4 @@
-from parse.worker import Worker
+from scraping.worker import Worker
 from config import Config
 
 if __name__ == '__main__':
