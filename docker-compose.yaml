@@ -5,15 +5,19 @@ services:
   db:
     image: postgres
     environment:
-      POSTGRES_DB: "test"
-      POSTGRES_USER: "test"
-      POSTGRES_PASSWORD: "testpassword"
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - db-data:/var/lib/postgresql/data
 
   web:
     build: ./backend
     restart: on-failure
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
       - "5000:5000"
     depends_on:

@@ -111,5 +111,5 @@ class Worker(Process):
                 with self.connection as conn:
                     conn.add_news(news)
                 sleep(10 * 60)
-            except Exception as e:
-                print(f'Scraping job failed: {e}')
+            except Exception as error:
+                print(f'Scraping job failed: {error}')

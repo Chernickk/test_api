@@ -1,7 +1,8 @@
 import datetime
 
-from flaskapp import app
 from flask import request
+
+from flaskapp import app
 from flaskapp.models import News
 
 
@@ -11,8 +12,8 @@ def get_news():
     hour = request.args.get('hour', default=0, type=int)
 
     if day or hour:
-        dt = datetime.datetime.now() - datetime.timedelta(days=day, hours=hour)
-        news = News.query.filter(News.posted_at >= dt).all()
+        date_time = datetime.datetime.now() - datetime.timedelta(days=day, hours=hour)
+        news = News.query.filter(News.posted_at >= date_time).all()
     else:
         news = News.query.all()
 
